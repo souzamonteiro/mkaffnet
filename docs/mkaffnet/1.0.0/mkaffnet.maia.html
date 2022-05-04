@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: mkaffnet.maia</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: mkaffnet.maia</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>#!/usr/bin/env maiascript
+
+///
+/// @license
+/// Copyright 2020 Roberto Luiz Souza Monteiro,
+///                Renata Souza Barreto,
+///                Hernane Borges de Barros Pereira.
+///
+/// Licensed under the Apache License, Version 2.0 (the "License")
+/// you may not use this file except in compliance with the License.
+/// You may obtain a copy of the License at
+///
+///   http://www.apache.org/licenses/LICENSE-2.0
+///
+/// Unless required by applicable law or agreed to in writing, software
+/// distributed under the License is distributed on an "AS IS" BASIS,
+/// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, eitherMath.express or implied.
+/// See the License for the specific language governing permissions and
+/// limitations under the License.
+///
+
+///
+/// MaiaApp core class.
+/// @namespace mkaffnet
+///
+namespace mkaffnet {
+    appTitle = "MkAffNet"
+    appName = "mkaffnet"
+    scriptPath = "./"
+    cnaLibrary = this.scriptPath + "/maia/cna/cna.maia"
+
+    /// Starts the application and processes the data passed as command line arguments.
+    /// @method run
+    /// @memberof maianne
+    async run() {
+        // Supports only the Node.js interpreter.
+        if (core.type(process) != "undefined") {
+            command = "node"
+            
+            fs = system.require("fs")
+
+            realPath = fs.realpathSync(system.argv[0])
+            filePath = realPath.split("/")
+            filePath = core.slice(filePath, 0, filePath.length - 2)
+            filePath = filePath.join("/")
+            this.scriptPath = filePath
+            this.cnaLibrary = this.scriptPath + "/maia/cna/cna.maia"
+            system.source(this.cnaLibrary)
+            
+            readTextFile = fs.readFileSync
+
+            // Read file callback.
+            function readFile(input) {
+                content = readTextFile(input, "utf-8")
+                return(content)
+            }
+            
+            // Command line options.
+            outputFile = ""
+            reportFile = ""
+            
+            host = ""
+            user = ""
+            password = ""
+            database = ""
+            table = ""
+            idColumn = "ID"
+            dateColumn = ""
+            columns = ""
+            
+            startId = ""
+            endId = ""
+            startDate = ""
+            endDate = ""
+            datesFile = ""
+            datesList = []
+            limit = -1
+            prefix = "sample"
+            indexFrom = -1
+            indexIn = -1
+            savePajekFile = false
+            minimumAffinity = -1
+            
+            // Get command line arguments.
+            if (system.argc > 1) {
+                i = 1
+                while (i &lt; system.argc) {
+                    if ((system.argv[i] == "-h") | (system.argv[i] == "--help")) {
+                        system.log(maianne.appTitle + " Command Line Interface (CLI)")
+                        system.log("Usage: " + maianne.appName + " [options] [input file] [--] [arguments]")
+                        system.log("Options:")
+                        system.log("-h     --help               Displays this help message;")
+                        system.log("-o     [output file]        Output file name.")
+                        system.log("-r                          Statistics report file.")
+                        system.log("       --host               Database host URL.")
+                        system.log("       --user               Database user.")
+                        system.log("       --password           Database password.")
+                        system.log("       --database           Database name.")
+                        system.log("       --table              Database table name.")
+                        system.log("       --idcolumn           Database table id column name.")
+                        system.log("       --sid                Start id.")
+                        system.log("       --eid                End id.")
+                        system.log("       --dcolumn            Database table date column name.")
+                        system.log("       --sdate              Start date.")
+                        system.log("       --edate              End date.")
+                        system.log("       --dfile              CSV file containing date pairs (start, end) for generating multiple networks.")
+                        system.log("       --limit              Maximum number of rows to consider to create the graph.")
+                        system.log("       --columns            Database columns of the table for building the chromosomes.")
+                        system.log("       --prefix             Prefix for multiple neural network files (default=sample).")
+                        system.log("       --net                Save output file also in Pajek format.")
+                        system.log("       --affinity           Minimum affinity to connect vertices.")
+                        process.exit(0)
+                    } elseif (system.argv[i] == "-o") {
+                        i = i + 1
+                        outputFile = system.argv[i]
+                    } elseif (system.argv[i] == "-r") {
+                        i = i + 1
+                        reportFile = system.argv[i]
+                    } elseif (system.argv[i] == "--host") {
+                        i = i + 1
+                        host = system.argv[i]
+                    } elseif (system.argv[i] == "--user") {
+                        i = i + 1
+                        user = system.argv[i]
+                    } elseif (system.argv[i] == "--password") {
+                        i = i + 1
+                        password = system.argv[i]
+                    } elseif (system.argv[i] == "--database") {
+                        i = i + 1
+                        database = system.argv[i]
+                    } elseif (system.argv[i] == "--table") {
+                        i = i + 1
+                        table = system.argv[i]
+                    } elseif (system.argv[i] == "--idcolumn") {
+                        i = i + 1
+                        dateColumn = system.argv[i]
+                    } elseif (system.argv[i] == "--sid") {
+                        i = i + 1
+                        startId = system.argv[i]
+                    } elseif (system.argv[i] == "--eid") {
+                        i = i + 1
+                        endId = system.argv[i]
+                    } elseif (system.argv[i] == "--dcolumn") {
+                        i = i + 1
+                        dateColumn = system.argv[i]
+                    } elseif (system.argv[i] == "--sdate") {
+                        i = i + 1
+                        startDate = system.argv[i]
+                    } elseif (system.argv[i] == "--edate") {
+                        i = i + 1
+                        endDate = system.argv[i]
+                    } elseif (system.argv[i] == "--dfile") {
+                        i = i + 1
+                        datesFile = system.argv[i]
+                    } elseif (system.argv[i] == "--limit") {
+                        i = i + 1
+                        limit = core.toNumber(system.argv[i])
+                    } elseif (system.argv[i] == "--columns") {
+                        i = i + 1
+                        columns = core.splitCSV(system.argv[i], ", ", true, false)
+                    } elseif (system.argv[i] == "--prefix") {
+                        i = i + 1
+                        prefix = system.argv[i]
+                    } elseif (system.argv[i] == "--from") {
+                        i = i + 1
+                        indexFrom = core.toNumber(system.argv[i])
+                    } elseif (system.argv[i] == "--in") {
+                        i = i + 1
+                        indexIn = core.toNumber(system.argv[i])
+                    } elseif (system.argv[i] == "--net") {
+                        savePajekFile = true
+                    } elseif (system.argv[i] == "--affinity") {
+                        i = i + 1
+                        minimumAffinity = core.toNumber(system.argv[i])
+                    } else {
+                        system.log(mkaffnet.appTitle + " Command Line Interface (CLI)")
+                        system.log("Usage: " + mkaffnet.appName + " [options]")
+                        break
+                    }
+                    i = i + 1
+                }
+            }
+
+            // Connect the database.
+            mysql = system.require("mysql2/promise")
+
+            connection ?= mysql.createConnection({
+                "host": host,
+                "user": user,
+                "password": password,
+                "database": database
+            })
+
+            nFiles = 1
+            
+            // Get the list of dates intervals.
+            if (datesFile != "") {
+                datesList = system.loadCSV(datesFile, 0, ", ", true, false)
+            } else {
+                datesList.push([startDate, endDate])
+            }
+
+            // Calculates the file index number range.
+            nFiles = datesList.length
+            if (indexFrom &lt; 1) {
+                indexFrom = 1
+            }
+            if (indexIn &lt; 1) {
+                indexIn = nFiles
+            }
+            fileIndex = indexFrom
+            
+            // Generate graphs for each dates interval.
+            system.println("Processing " + nFiles + " datasets.")
+                
+            foreach (datesList; dateIndex; datesInterval) {
+                startDate = datesInterval[0]
+                endDate = datesInterval[1]
+
+                system.println("Processing dataset " + fileIndex + "...")
+                
+                startTime := Date()
+
+                if (outputFile == "") {
+                    outputFile = prefix + "-" + string.sprintf("%0" + core.length(core.toString(indexIn)) + "." + core.length(core.toString(indexIn)) + "d", fileIndex) + ".json"
+                    fileIndex = fileIndex + 1
+                }
+
+                // Get the file without extension.
+                fileName = outputFile.split(".")
+                fileName = fileName.shift()
+
+                // Get the file name extension.
+                fileExtension = outputFile.split(".")
+                fileExtension = fileExtension.pop()
+
+                // Filter database for this dates interval.
+                //result ?= connection.execute("select * from " + table + " limit 1")
+                idCondition = ""
+                limitClause = ""
+
+                if (startId != "") {
+                    idCondition = idCondition + " and " + idColumn + " >= " + startId
+                }
+                if (endId != "") {
+                    idCondition = idCondition + " and " + idColumn + " &lt;= " + endId
+                }
+                if (limit != -1) {
+                    limitClause = " limit " + limit
+                }
+
+                result ?= connection.query("select * from " + table + " where " + dateColumn + " >= str_to_date('" + startDate + "', '%d-%m-%Y') and " + dateColumn + " &lt;= str_to_date('" + endDate + "', '%d-%m-%Y')" + idCondition + " order by " + dateColumn + limitClause)
+                rows = result[0]
+
+                system.println("Dataset contains " + rows.length + " records.")
+                
+                if (rows.length > 0) {
+                    network = {
+                        "nodes": [],
+                        "edges": []
+                    }
+
+                    // Add vertices to the graph.
+                    system.println("Creating a disconnected graph.")
+                    nodeIndex = 1
+                    foreach (rows; index; row) {
+                        node = {
+                            "id": "n" + core.toString(nodeIndex),
+                            "label": "n" + core.toString(row.ID),
+                            "x": math.random(),
+                            "y": math.random(),
+                            "size": 1,
+                            "chromossome": []
+                        }
+                        foreach (row; columnName; columnValue) {
+                            if (columns.includes(columnName)) {
+                                node.chromossome.push(row[columnName])
+                            }
+                        }
+                        network.nodes.push(node)
+                        nodeIndex = nodeIndex + 1
+                    }
+
+                    // Add edges to the graph.
+                    system.println("Calculating the affinities between nodes.")
+                    edgeIndex = 1
+                    for (sourceIndex = 0; sourceIndex &lt; network.nodes.length; sourceIndex = sourceIndex + 1) {
+                        for (targetIndex = 0; targetIndex &lt; network.nodes.length; targetIndex = targetIndex + 1) {
+                            if (sourceIndex &lt; targetIndex) {
+                                source = network.nodes[sourceIndex]
+                                target = network.nodes[targetIndex]
+                                geneCount = 0
+                                chromossomeSize = source.chromossome.length
+                                for (g = 0; g &lt; chromossomeSize; g = g + 1) {
+                                    if ((source.chromossome[g] != "undefined") &amp;&amp; (source.chromossome[g] != null) &amp;&amp; (target.chromossome[g] != "undefined") &amp;&amp; (target.chromossome[g] != null)) {
+                                        if (source.chromossome[g] == target.chromossome[g]) {
+                                            geneCount = geneCount + 1
+                                        }
+                                    }
+                                }
+                                weight = geneCount / chromossomeSize
+                                edge = {
+                                    "id": "e" + core.toString(edgeIndex),
+                                    "source": source.id,
+                                    "target": target.id,
+                                    "size": weight
+                                }
+                                network.edges.push(edge)
+                                edgeIndex = edgeIndex + 1
+                            }
+                        }
+                    }
+
+                    // Calculate the statistics.
+                    system.println("Calculating statistics on affinities.")
+                    sx = 0
+                    sx2 = 0
+                    n = 0
+                    minValue = ""
+                    maxValue = ""
+                    affinityDistribution = []
+                    foreach (network.edges; edgeIndex; edge) {
+                        x = edge.size
+                        sx = sx + x
+                        sx2 = sx2 + x * x
+                        n = n + 1
+                        if (minValue == "") {
+                            minValue = x
+                        } else {
+                            if (minValue > x) {
+                                minValue = x
+                            }
+                        }
+                        if (maxValue == "") {
+                            maxValue = x
+                        } else {
+                            if (maxValue &lt; x) {
+                                maxValue = x
+                            }
+                        }
+                        if (core.type(affinityDistribution[core.toString(x)]) == "undefined") {
+                            affinityDistribution[core.toString(x)] = 1
+                        } else {
+                            affinityDistribution[core.toString(x)] = affinityDistribution[core.toString(x)] + 1
+                        }
+                        if (minimumAffinity != -1) {
+                            if (x >= minimumAffinity) {
+                                edge.size = 1
+                            } else {
+                                edge.size = 0
+                            }
+                        }
+                    }
+                    average = sx / n
+                    deviation = math.sqrt((sx2 - (sx * sx) / n) / (n - 1))
+
+                    // Save the graph in JSON format.
+                    system.println("Saving the graph in JSON format.")
+                    fs.writeFileSync(outputFile, JSON.stringify(network))
+
+                    // Save the Pajek file.
+                    if (savePajekFile) {
+                        system.println("Saving the graph in Pajek format.")
+                        pajekFile = fileName + ".net"
+                        pajekFileContents = cna.jsonToPajekFile(network)
+                        
+                        fs.writeFileSync(pajekFile, pajekFileContents)
+                    }
+
+                    // Save the report file.
+                    system.println("Saving a report containing statistics about affinities.")
+                    if (reportFile == "") {
+                        reportFile = fileName + "-report.txt"
+                    }
+                    reportFileContents = "AFFINITY STATISTICS\n\n"
+                    reportFileContents = reportFileContents + "Average:   " + average + "\n"
+                    reportFileContents = reportFileContents + "Deviation: " + deviation + "\n"
+                    reportFileContents = reportFileContents + "Minimum:   " + minValue + "\n"
+                    reportFileContents = reportFileContents + "Maximum:   " + maxValue + "\n"
+                    reportFileContents = reportFileContents + "Affinity distribution:\n"
+                    reportFileContents = reportFileContents + "Value\tFrequency\n"
+                    foreach (affinityDistribution; affinityValue; affinityFrequency) {
+                        reportFileContents = reportFileContents + affinityValue + "\t" + affinityFrequency + "\n"
+                    }
+                    fs.writeFileSync(reportFile, reportFileContents)
+
+                    outputFile = ""
+                    reportFile = ""
+                }
+
+                endTime := Date()
+                elapsedTime = endTime - startTime
+
+                system.println("Elapsed time to process this dataset: " + core.toString(elapsedTime / 1000) + " seconds.\n")
+            }
+            process.exit()
+        }
+    }
+}
+
+// Run the MaiaApp code if this script has been invoked
+// from the command line.
+if (core.type(process) != "undefined") {
+    mkaffnet.run()
+}</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="mkaffnet.html">mkaffnet</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.10</a> on Wed May 04 2022 11:44:36 GMT+0000 (Coordinated Universal Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
