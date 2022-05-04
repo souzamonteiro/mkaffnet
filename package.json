@@ -1,6 +1,6 @@
 {
   "name": "mkaffnet",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A tool to create affinity networks from data in MySQL database tables.",
   "main": "echo \"Error: no main specified\" && exit 1",
   "scripts": {

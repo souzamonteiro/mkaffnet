@@ -133,7 +133,7 @@ namespace mkaffnet {
                         table = system.argv[i]
                     } elseif (system.argv[i] == "--idcolumn") {
                         i = i + 1
-                        dateColumn = system.argv[i]
+                        idColumn = system.argv[i]
                     } elseif (system.argv[i] == "--sid") {
                         i = i + 1
                         startId = system.argv[i]
@@ -266,7 +266,7 @@ namespace mkaffnet {
                     foreach (rows; index; row) {
                         node = {
                             "id": "n" + core.toString(nodeIndex),
-                            "label": "n" + core.toString(row.ID),
+                            "label": "n" + core.toString(row[idColumn]),
                             "x": math.random(),
                             "y": math.random(),
                             "size": 1,
