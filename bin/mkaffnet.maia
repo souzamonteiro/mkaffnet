@@ -74,6 +74,7 @@ namespace mkaffnet {
             endDate = ""
             datesFile = ""
             datesList = []
+            whereClause = ""
             limit = -1
             prefix = "sample"
             indexFrom = -1
@@ -104,6 +105,7 @@ namespace mkaffnet {
                         system.log("       --sdate              Start date.")
                         system.log("       --edate              End date.")
                         system.log("       --dfile              CSV file containing date pairs (start, end) for generating multiple networks.")
+                        system.log("       --where              Additional condition for filter.")
                         system.log("       --limit              Maximum number of rows to consider to create the graph.")
                         system.log("       --columns            Database columns of the table for building the chromosomes.")
                         system.log("       --prefix             Prefix for multiple neural network files (default=sample).")
@@ -152,6 +154,9 @@ namespace mkaffnet {
                     } elseif (system.argv[i] == "--dfile") {
                         i = i + 1
                         datesFile = system.argv[i]
+                    } elseif (system.argv[i] == "--where") {
+                        i = i + 1
+                        whereClause = system.argv[i]
                     } elseif (system.argv[i] == "--limit") {
                         i = i + 1
                         limit = core.toNumber(system.argv[i])
@@ -245,11 +250,18 @@ namespace mkaffnet {
                 if (endId != "") {
                     idCondition = idCondition + " and " + idColumn + " <= " + endId
                 }
+                if (whereClause != "") {
+                    whereClause = " and " + whereClause
+                }
                 if (limit != -1) {
                     limitClause = " limit " + limit
                 }
 
-                result ?= connection.query("select * from " + table + " where " + dateColumn + " >= str_to_date('" + startDate + "', '%d-%m-%Y') and " + dateColumn + " <= str_to_date('" + endDate + "', '%d-%m-%Y')" + idCondition + " order by " + dateColumn + limitClause)
+                queryString = "select * from " + table + " where " + dateColumn + " >= str_to_date('" + startDate + "', '%d-%m-%Y') and " + dateColumn + " <= str_to_date('" + endDate + "', '%d-%m-%Y')" + idCondition + whereClause + " order by " + dateColumn + limitClause
+
+                system.println("Query string: " + queryString)
+
+                result ?= connection.query(queryString)
                 rows = result[0]
 
                 system.println("Dataset contains " + rows.length + " records.")
